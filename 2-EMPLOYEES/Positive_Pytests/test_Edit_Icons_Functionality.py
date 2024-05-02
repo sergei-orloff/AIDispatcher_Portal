@@ -9,27 +9,35 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.keys import Keys
+
+faker = Faker()
+
+# Website address:
+url = "https://test.aidispatcher.com/authentication"
+# LogIn Credentials
+username = "thedogzog@gmail.com"
+password = "qaz123"
 
 
-@pytest.fixture
-def chrome_driver():
-    faker = Faker()
+@pytest.fixture(scope="session")
+def chrome_driver(request):
     chrome_opt = Options()
     Options.age_load_strategy = 'eager'
-    # chrome_opt.add_argument("--headless")  # Ensure GUI is off
-    # chrome_opt.add_argument("--no-sandbox")
-    # chrome_opt.add_argument("--disable-dev-shm-usage")
 
     webdriver_service = Service(ChromeDriverManager().install())
     driver = webdriver.WebDriver(service=webdriver_service, options=chrome_opt)
-    url = "https://test.aidispatcher.com/authentication"
+
     driver.get(url)
     driver.maximize_window()
 
-    # LogIn Credentials
-    username = "thedogzog@gmail.com"
-    password = "qaz123"
+    yield driver
+
+    driver.quit()
+
+
+@pytest.fixture(scope="session")
+def login(chrome_driver):
+    driver = chrome_driver
 
     # Find the username input field and enter the username
     username_input = driver.find_element(By.ID, ":r0:")
@@ -48,41 +56,48 @@ def chrome_driver():
     except TimeoutException:
         print("The 'Board' page is not displayed.")
 
-    # Wait until the "Roster" element is visible and clickable
-    element = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".css-r7rlel")))
 
-    # Click on the element using JavaScript
-    driver.execute_script("arguments[0].click();", element)
+def delay():
+    time.sleep(random.randint(1, 2))  # Delay all actions from 1 to 2 sec
 
+
+def roster_element(chrome_driver):
+    try:
+        element = WebDriverWait(chrome_driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".css-r7rlel")))
+        chrome_driver.execute_script("arguments[0].click();", element)
+        print('The "Roster" element is visible and clickable')
+    except TimeoutException:
+        print('The "Roster" element is NOT visible or clickable')
+
+
+def employees_screen_open(chrome_driver):
     # Wait until the "Employees" element is clickable and click on it
-    element = WebDriverWait(driver, 10).until(
+    element = WebDriverWait(chrome_driver, 10).until(
         EC.element_to_be_clickable((By.CSS_SELECTOR, ".css-1nyrutf .MuiTypography-root")))
     element.click()
 
     # Verify that the page title is "Employees".
     try:
-        WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//h6[contains(.,'employees')]")))
+        WebDriverWait(chrome_driver, 10).until(
+            EC.visibility_of_element_located((By.XPATH, "//h6[contains(.,'employees')]")))
         print("The 'Employees' page is displayed.")
     except TimeoutException:
         print("The 'Employees' page is not displayed.")
 
-    yield driver
 
-    driver.quit()
-
-
-def delay():
-    time.sleep(random.randint(1, 3))  # Delay all actions from 1 to 3 sec
-
-
-def test_edit_icon(chrome_driver):
+# Optional:
+def entries_per_page_number(chrome_driver):
     # Optional: Find the number of Entries per page
-    setEntriesNumber = chrome_driver.find_element(By.ID, ":re:")
+    try:
+        setEntriesNumber = WebDriverWait(chrome_driver, 10).until(EC.presence_of_element_located((By.ID, ":re:")))
+        # Read the number of entries per page in the combobox:
+        entriesPerPage = setEntriesNumber.get_attribute("value")
+        print("The number of entries per page is up to:", entriesPerPage)
+    except TimeoutException:
+        print("Entries number is not visible.")
 
-    # Read the number of entries per page in the combobox:
-    entriesPerPage = setEntriesNumber.get_attribute("value")
 
-    print("The number of entries per page is up to:", entriesPerPage)
+def all_records_display(chrome_driver):
     # Loop through the pages:
     page_number = 1
     recordNumber = 1
@@ -92,29 +107,29 @@ def test_edit_icon(chrome_driver):
         # Process all records on the page:
         try:
             # Wait for the "Edit" icon to be present:
-            edit_icon = WebDriverWait(chrome_driver, 10).until(EC.presence_of_element_located((By.XPATH, record_xpath)))
+            edit_icon = WebDriverWait(chrome_driver, 5).until(EC.presence_of_element_located((By.XPATH, record_xpath)))
             # Click on the "Edit" icon:
             chrome_driver.execute_script("arguments[0].click();", edit_icon)
 
             delay()
-            # Verify the form title == "Employee Info"
+
             try:
+                # Verify the form title == "Employee Info"
                 title = chrome_driver.find_element(By.XPATH, "//h3[contains(.,'Employee Info')]")
-
-                fNameBox = chrome_driver.find_element(By.XPATH, "//input[@name='firstName']")
                 # Read the First name
+                fNameBox = chrome_driver.find_element(By.XPATH, "//input[@name='firstName']")
                 firstName = fNameBox.get_attribute("value")
-
-                lNameBox = chrome_driver.find_element(By.XPATH, "//input[@name='lastName']")
                 # Read the Last name
+                lNameBox = chrome_driver.find_element(By.XPATH, "//input[@name='lastName']")
                 lastName = lNameBox.get_attribute("value")
 
                 print(f"'{title.text}':  {firstName} {lastName}")
             except NoSuchElementException:
                 print(f"The form 'Employee Info' is NOT displayed.")
+
             # Click on "Cancel"
             cancelBtn = chrome_driver.find_element(By.XPATH, "//button[contains(.,'Cancel')]")
-            cancelBtn.click()
+            chrome_driver.execute_script("arguments[0].click();", cancelBtn)
 
             recordNumber += 1
 
@@ -135,3 +150,20 @@ def test_edit_icon(chrome_driver):
                 break
 
         delay()
+
+
+def return_to_board_page(chrome_driver):
+    try:
+        brand_button = chrome_driver.find_element(By.XPATH, "//img[contains(@alt,'Brand')]")
+        brand_button.click()
+        print("Back to Dashboard.")
+        delay()
+    except NoSuchElementException as e:
+        print(f'Error: {e}')
+
+
+def test_verify_edit_icons(chrome_driver, login):
+    roster_element(chrome_driver)
+    employees_screen_open(chrome_driver)
+    all_records_display(chrome_driver)
+    return_to_board_page(chrome_driver)
