@@ -12,79 +12,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 faker = Faker()
 
-# Website address:
-url = "https://test.aidispatcher.com/authentication"
-# LogIn Credentials
-username = "thedogzog@gmail.com"
-password = "qaz123"
-
-
-@pytest.fixture(scope="session")
-def chrome_driver(request):
-    chrome_opt = Options()
-    Options.age_load_strategy = 'eager'
-
-    webdriver_service = Service(ChromeDriverManager().install())
-    driver = webdriver.WebDriver(service=webdriver_service, options=chrome_opt)
-
-    driver.get(url)
-    driver.maximize_window()
-
-    yield driver
-
-    driver.quit()
-
-
-@pytest.fixture(scope="session")
-def login(chrome_driver):
-    driver = chrome_driver
-
-    # Find the username input field and enter the username
-    username_input = driver.find_element(By.ID, ":r0:")
-    username_input.send_keys(username)
-    # Find the password input field and enter the password
-    password_input = driver.find_element(By.ID, ":r1:")
-    password_input.send_keys(password)
-    # Click on the login button
-    login_button = driver.find_element(By.CSS_SELECTOR, ".MuiButton-root")
-    login_button.click()
-
-    # Verify that the page title is "Board".
-    try:
-        WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.XPATH, "//h6[contains(text(),'board')]")))
-        print("The 'Board' page is displayed.")
-    except TimeoutException:
-        print("The 'Board' page is not displayed.")
-
 
 def delay():
     time.sleep(random.randint(1, 2))  # Delay all actions from 1 to 2 sec
 
 
-def roster_element(chrome_driver):
-    try:
-        element = WebDriverWait(chrome_driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".css-r7rlel")))
-        chrome_driver.execute_script("arguments[0].click();", element)
-        print('The "Roster" element is visible and clickable')
-    except TimeoutException:
-        print('The "Roster" element is NOT visible or clickable')
-
-
-def employees_screen_open(chrome_driver):
-    # Wait until the "Employees" element is clickable and click on it
-    element = WebDriverWait(chrome_driver, 10).until(
-        EC.element_to_be_clickable((By.CSS_SELECTOR, ".css-1nyrutf .MuiTypography-root")))
-    element.click()
-
-    # Verify that the page title is "Employees".
-    try:
-        WebDriverWait(chrome_driver, 10).until(
-            EC.visibility_of_element_located((By.XPATH, "//h6[contains(.,'employees')]")))
-        print("The 'Employees' page is displayed.")
-    except TimeoutException:
-        print("The 'Employees' page is not displayed.")
-
-
+# ===========================================================
 # Optional:
 def entries_per_page_number(chrome_driver):
     # Optional: Find the number of Entries per page
@@ -92,9 +25,9 @@ def entries_per_page_number(chrome_driver):
         setEntriesNumber = WebDriverWait(chrome_driver, 10).until(EC.presence_of_element_located((By.ID, ":re:")))
         # Read the number of entries per page in the combobox:
         entriesPerPage = setEntriesNumber.get_attribute("value")
-        print("The number of entries per page is up to:", entriesPerPage)
+        print("\nThe number of entries per page is up to:", entriesPerPage)
     except TimeoutException:
-        print("Entries number is not visible.")
+        print("\nEntries number is not visible.")
 
 
 def all_records_display(chrome_driver):
@@ -123,9 +56,9 @@ def all_records_display(chrome_driver):
                 lNameBox = chrome_driver.find_element(By.XPATH, "//input[@name='lastName']")
                 lastName = lNameBox.get_attribute("value")
 
-                print(f"'{title.text}':  {firstName} {lastName}")
+                print(f"{title.text}:  {firstName} {lastName}")
             except NoSuchElementException:
-                print(f"The form 'Employee Info' is NOT displayed.")
+                print("The form 'Employee Info' is NOT displayed.")
 
             # Click on "Cancel"
             cancelBtn = chrome_driver.find_element(By.XPATH, "//button[contains(.,'Cancel')]")
@@ -162,8 +95,8 @@ def return_to_board_page(chrome_driver):
         print(f'Error: {e}')
 
 
-def test_verify_edit_icons(chrome_driver, login):
-    roster_element(chrome_driver)
-    employees_screen_open(chrome_driver)
+# ====================================================
+def test_verify_edit_icons(chrome_driver, login, roster_element, employees_screen_open):
+    entries_per_page_number(chrome_driver)
     all_records_display(chrome_driver)
     return_to_board_page(chrome_driver)
