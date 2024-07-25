@@ -202,7 +202,8 @@ class TestEmployeeFormChrome(unittest.TestCase):
     def test02_edit_icon(self):  # ========== TC-02: Verify the "Employee Info" icon functionality.
         # \\\\\\\\\\\\\\\ Optional: Find the number of Entries per page \\\\\\\\\\\\\\\\\\\\\\\
         # Find the combobox by its id:
-        setEntriesNumber = self.driver.find_element(By.ID, ":re:")
+        setEntriesNumber = WebDriverWait(self.driver, 10).until(
+            EC.visibility_of_element_located((By.ID, ":re:")))
 
         # Read the number of entries per page in the combobox:
         entriesPerPage = setEntriesNumber.get_attribute("value")
